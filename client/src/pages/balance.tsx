@@ -21,8 +21,29 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 
-// We'll get transactions from the API
+// Make sure to call `loadStripe` outside of a component's render to avoid
+// recreating the `Stripe` object on every render.
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
+interface TransactionHistoryItem {
+  id: number;
+  type: 'credit' | 'debit' | 'pending';
+  description: string;
+  amount: number;
+  date: string;
+}
+
+interface BalanceData {
+  balance: number;
+}
 
 export default function Balance() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,13 +55,13 @@ export default function Balance() {
   };
 
   // Fetch user balance
-  const { data: balanceData, isLoading: balanceLoading } = useQuery({
+  const { data: balanceData, isLoading: balanceLoading } = useQuery<BalanceData>({
     queryKey: ["/api/balance"],
     // queryFn set in queryClient.ts
   });
   
   // Fetch transaction history
-  const { data: transactionHistory, isLoading: historyLoading } = useQuery({
+  const { data: transactionHistory, isLoading: historyLoading } = useQuery<TransactionHistoryItem[]>({
     queryKey: ["/api/balance/history"],
     // queryFn set in queryClient.ts
   });
@@ -60,44 +81,100 @@ export default function Balance() {
       }),
   });
 
-  // Initialize form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      amount: "",
-    },
-  });
+  function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Add funds mutation
-  const addFundsMutation = useMutation({
-    mutationFn: async (data: { amount: number }) => {
-      const response = await apiRequest("POST", "/api/balance/add", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Funds Added",
-        description: "Your funds have been added successfully.",
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href,
+        },
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/balance"] });
-      setAddFundsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: Error) => {
+
+      if (error) {
+        toast({
+          title: "Payment Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        // Payment successful
+        onSuccess();
+        toast({
+          title: "Payment Successful",
+          description: "Your funds will be added to your balance shortly.",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add funds. Please try again.",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
-    },
-  });
-
-  // Submit handler
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    addFundsMutation.mutate({
-      amount: parseFloat(values.amount),
-    });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      <Button
+        type="submit"
+        disabled={!stripe || isLoading}
+        className="w-full"
+      >
+        {isLoading ? "Processing..." : `Pay $${amount.toFixed(2)}`}
+      </Button>
+    </form>
+  );
+}
+
+// Initialize form and state
+const [clientSecret, setClientSecret] = useState("");
+const form = useForm<z.infer<typeof formSchema>>({
+  resolver: zodResolver(formSchema),
+  defaultValues: {
+    amount: "",
+  },
+});
+
+// Create payment intent mutation
+const createPaymentIntentMutation = useMutation({
+  mutationFn: async (data: { amount: number }) => {
+    const response = await apiRequest("POST", "/api/balance/create-payment-intent", data);
+    return response.json();
+  },
+  onSuccess: (data) => {
+    setClientSecret(data.clientSecret);
+  },
+  onError: (error: Error) => {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to initialize payment. Please try again.",
+      variant: "destructive",
+    });
+  },
+});
+
+// Submit handler
+const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const amount = parseFloat(values.amount);
+  createPaymentIntentMutation.mutate({ amount });
+};
 
   // Format date to readable format
   const formatDate = (dateString: string) => {
@@ -230,40 +307,7 @@ export default function Balance() {
               </Card>
             </div>
 
-            {/* Payment Methods */}
-            <div className="mt-8">
-              <Card>
-                <CardHeader className="px-5 py-4 border-b border-gray-200">
-                  <h4 className="text-lg font-medium leading-6 text-gray-900">Payment Methods</h4>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="border rounded-lg p-4 flex-1 bg-gray-50">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                            <i className="fas fa-credit-card"></i>
-                          </div>
-                          <h5 className="text-gray-900 font-medium ml-3">Credit/Debit Card</h5>
-                        </div>
-                        <div className="text-sm text-primary-600 font-medium">Default</div>
-                      </div>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p>•••• •••• •••• 1234</p>
-                        <p>Expires: 09/24</p>
-                      </div>
-                    </div>
-                    
-                    <div className="border rounded-lg p-4 flex-1 border-dashed flex items-center justify-center">
-                      <Button variant="outline" className="w-full">
-                        <i className="fas fa-plus mr-2"></i>
-                        Add Payment Method
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+
           </div>
         </main>
         
@@ -276,47 +320,61 @@ export default function Balance() {
             <DialogHeader>
               <DialogTitle>Add Funds</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount (USD)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500">$</span>
+            {!clientSecret ? (
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount (USD)</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500">$</span>
+                            </div>
+                            <Input
+                              placeholder="0.00"
+                              className="pl-7"
+                              {...field}
+                            />
                           </div>
-                          <Input
-                            placeholder="0.00"
-                            className="pl-7"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setAddFundsDialogOpen(false)}
+                      type="button"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={createPaymentIntentMutation.isPending}
+                    >
+                      {createPaymentIntentMutation.isPending ? "Processing..." : "Continue"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            ) : (
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <CheckoutForm
+                  amount={parseFloat(form.getValues("amount"))}
+                  onSuccess={() => {
+                    setAddFundsDialogOpen(false);
+                    setClientSecret("");
+                    form.reset();
+                    queryClient.invalidateQueries({ queryKey: ["/api/balance"] });
+                  }}
                 />
-                <DialogFooter>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setAddFundsDialogOpen(false)}
-                    type="button"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit"
-                    disabled={addFundsMutation.isPending}
-                  >
-                    {addFundsMutation.isPending ? "Processing..." : "Add Funds"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+              </Elements>
+            )}
           </DialogContent>
         </Dialog>
       </div>
