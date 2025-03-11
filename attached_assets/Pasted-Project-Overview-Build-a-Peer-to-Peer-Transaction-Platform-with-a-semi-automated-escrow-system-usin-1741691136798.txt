@@ -1,0 +1,43 @@
+Project Overview:
+Build a Peer-to-Peer Transaction Platform with a semi-automated escrow system using Next.js (frontend), Node.js (backend), and MongoDB (database). The platform should allow secure transactions between buyers and sellers, where funds are held in escrow and released upon mutual agreement. In case of disputes, an admin can moderate and resolve issues. Users can leave reviews after a successful transaction.
+
+Core Features:
+
+User Authentication: Signup, login, and role-based access (buyer, seller, admin).
+Transaction System: Buyers and sellers can initiate transactions, which are held in escrow until both parties agree to release funds.
+Escrow Management: Secure fund holding and controlled release.
+Dispute Resolution: Users can raise disputes, and admins can moderate and resolve them.
+AI-Powered Fraud Detection (Future Scope): Analyze transaction patterns and assign a risk score before processing payments.
+User Reviews: Buyers and sellers can leave feedback after transaction completion.
+Admin Dashboard: Manage users, monitor transactions, and resolve disputes.
+Tech Stack:
+
+Frontend: Next.js (with Tailwind CSS for UI)
+Backend: Node.js with Express.js
+Database: MongoDB (Mongoose ORM)
+Authentication: JWT-based auth with bcrypt for password hashing
+State Management: React Context API
+Deployment: Vercel (frontend) & Railway/Render (backend)
+Database Schema:
+
+Users: username, email, password, balance, role, transactions[]
+Transactions: buyer, seller, amount, status, escrow_release, ai_risk_score
+Escrow: transaction_id, amount_held, released, release_date
+Disputes: transaction_id, raised_by, reason, resolution, resolved_by
+Reviews: reviewer, transaction_id, rating, comment
+Requirements:
+
+Implement secure authentication and protect routes based on user roles.
+Build a dashboard where users can view transactions and balances.
+Integrate an escrow system where funds are locked until conditions are met.
+Allow dispute resolution with admin intervention if needed.
+Enable reviews and ratings after transactions.
+Design an AI-powered fraud detection model that assigns a risk score (future enhancement).
+Deliverables:
+
+A fully functional Next.js website with a Node.js backend.
+A clean UI/UX using Tailwind CSS.
+Secure API endpoints for managing transactions, escrow, and disputes.
+MongoDB database integration with schema validation.
+Proper error handling and security measures (JWT, bcrypt, input validation).
+Deployment-ready code with environment variable configuration.
