@@ -25,6 +25,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
 
+  // User lookup route
+  app.get("/api/user/:identifier", async (req, res) => {
+    try {
+      const { identifier } = req.params;
+      
+      // Try to find user by username first
+      let user = await storage.getUserByUsername(identifier);
+      
+      // If not found, try by email
+      if (!user) {
+        user = await storage.getUserByEmail(identifier);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error finding user" });
+    }
+  });
+
   // User balance routes
   app.get("/api/balance", isAuthenticated, async (req, res) => {
     try {
@@ -362,6 +387,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.userId);
       const reviews = await storage.getUserReviews(userId);
+      res.json(reviews);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching reviews" });
+    }
+  });
+  
+  // Get all reviews for the authenticated user
+  app.get("/api/reviews", isAuthenticated, async (req, res) => {
+    try {
+      const reviews = await storage.getUserReviews(req.user.id);
       res.json(reviews);
     } catch (error) {
       res.status(500).json({ message: "Error fetching reviews" });
