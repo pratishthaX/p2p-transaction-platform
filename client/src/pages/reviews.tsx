@@ -84,15 +84,18 @@ export default function Reviews() {
     },
   ];
 
+  // Get API reviews data and handle null/undefined cases  
+  const reviewsData = reviews || [];
+
   // Filter reviews based on active tab
-  const filteredReviews = mockReviews.filter(review => 
+  const filteredReviews = reviewsData.filter((review: any) => 
     activeTab === "received" 
       ? review.revieweeId === user?.id
       : review.reviewerId === user?.id
   );
 
   // Calculate average rating
-  const calculateAverageRating = (reviews: typeof mockReviews) => {
+  const calculateAverageRating = (reviews: any[]) => {
     if (reviews.length === 0) return 0;
     const total = reviews.reduce((sum, review) => sum + review.rating, 0);
     return (total / reviews.length).toFixed(1);
@@ -132,7 +135,7 @@ export default function Reviews() {
   };
 
   // Calculate the average rating for received reviews
-  const avgRating = parseFloat(calculateAverageRating(mockReviews.filter(r => r.revieweeId === user?.id))) || 0;
+  const avgRating = parseFloat(calculateAverageRating(reviewsData.filter((r: any) => r.revieweeId === user?.id))) || 0;
 
   return (
     <div className="flex min-h-screen">
