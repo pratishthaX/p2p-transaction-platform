@@ -131,6 +131,9 @@ export default function Reviews() {
     }
   };
 
+  // Calculate the average rating for received reviews
+  const avgRating = parseFloat(calculateAverageRating(mockReviews.filter(r => r.revieweeId === user?.id))) || 0;
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -161,7 +164,7 @@ export default function Reviews() {
                           {calculateAverageRating(mockReviews.filter(r => r.revieweeId === user?.id))}
                         </div>
                         <div className="flex text-amber-400 text-xl">
-                          {renderStars(parseFloat(calculateAverageRating(mockReviews.filter(r => r.revieweeId === user?.id))))}
+                          {renderStars(avgRating)}
                         </div>
                       </div>
                       <p className="text-sm text-gray-500 mt-1">Based on {mockReviews.filter(r => r.revieweeId === user?.id).length} reviews</p>
@@ -200,16 +203,19 @@ export default function Reviews() {
             <div className="mt-8">
               <Card>
                 <CardHeader className="px-5 py-4 border-b border-gray-200">
-                  <Tabs defaultValue="received" value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList>
-                      <TabsTrigger value="received">Reviews Received</TabsTrigger>
-                      <TabsTrigger value="given">Reviews Given</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  <div>
+                    <Tabs defaultValue="received" value={activeTab} onValueChange={setActiveTab}>
+                      <TabsList>
+                        <TabsTrigger value="received">Reviews Received</TabsTrigger>
+                        <TabsTrigger value="given">Reviews Given</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <TabsContent value="received" className="mt-0">
-                    {isLoading ? (
+                  {activeTab === "received" ? (
+                    // Reviews Received Tab
+                    isLoading ? (
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {[1, 2, 3].map(i => (
                           <Skeleton key={i} className="h-48" />
@@ -248,11 +254,10 @@ export default function Reviews() {
                           </div>
                         ))}
                       </div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="given" className="mt-0">
-                    {isLoading ? (
+                    )
+                  ) : (
+                    // Reviews Given Tab
+                    isLoading ? (
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {[1, 2, 3].map(i => (
                           <Skeleton key={i} className="h-48" />
@@ -293,8 +298,8 @@ export default function Reviews() {
                           </div>
                         ))}
                       </div>
-                    )}
-                  </TabsContent>
+                    )
+                  )}
                 </CardContent>
               </Card>
             </div>
