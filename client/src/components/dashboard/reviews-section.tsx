@@ -14,44 +14,8 @@ export function ReviewsSection() {
     // queryFn set in queryClient.ts
   });
   
-  // Mock data for reviews (would be replaced with real data)
-  const mockReviews = [
-    {
-      id: 1,
-      reviewerId: 2,
-      reviewerName: "Jason Kim",
-      transactionId: 101,
-      transactionTitle: "Consulting Service",
-      amount: 350,
-      rating: 5,
-      comment: "Great consulting service! John was very professional and provided valuable insights for our project. Would definitely work with again.",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 2,
-      reviewerId: 3,
-      reviewerName: "Robert Wilson",
-      transactionId: 102,
-      transactionTitle: "E-book Purchase",
-      amount: 25,
-      rating: 4,
-      comment: "The e-book was delivered promptly and contained exactly what was promised. Very satisfied with this transaction.",
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 3,
-      reviewerId: 4,
-      reviewerName: "Lisa Wang",
-      transactionId: 103,
-      transactionTitle: "Website Template",
-      amount: 85,
-      rating: 4.5,
-      comment: "The website template is beautiful and well-documented. John was helpful with a few customization questions I had after purchase.",
-      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    }
-  ];
-  
-  const displayReviews = reviews || mockReviews;
+  // Use real data from API
+  const displayReviews = reviews || [];
   const totalRating = displayReviews.reduce((sum: number, review: any) => sum + review.rating, 0);
   const averageRating = displayReviews.length ? (totalRating / displayReviews.length).toFixed(1) : "0.0";
   

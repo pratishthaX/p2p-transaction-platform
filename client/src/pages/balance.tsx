@@ -22,44 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Simulated transactions for transaction history display
-const mockTransactionHistory = [
-  {
-    id: 1,
-    type: 'credit',
-    description: 'Added funds via credit card',
-    amount: 500.00,
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    type: 'debit',
-    description: 'Payment for Website Development',
-    amount: 280.00,
-    date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    type: 'credit',
-    description: 'Received payment for Logo Design',
-    amount: 150.00,
-    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 4,
-    type: 'credit',
-    description: 'Refund for cancelled transaction',
-    amount: 75.00,
-    date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 5,
-    type: 'debit',
-    description: 'Payment for Digital Marketing',
-    amount: 350.00,
-    date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// We'll get transactions from the API
 
 export default function Balance() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

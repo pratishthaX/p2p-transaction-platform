@@ -164,20 +164,20 @@ export default function Reviews() {
                       <h4 className="text-lg font-medium text-gray-900 mb-2">Your Overall Rating</h4>
                       <div className="flex items-center">
                         <div className="text-4xl font-bold text-gray-900 mr-2">
-                          {calculateAverageRating(mockReviews.filter(r => r.revieweeId === user?.id))}
+                          {calculateAverageRating(reviewsData.filter((r: any) => r.revieweeId === user?.id))}
                         </div>
                         <div className="flex text-amber-400 text-xl">
                           {renderStars(avgRating)}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Based on {mockReviews.filter(r => r.revieweeId === user?.id).length} reviews</p>
+                      <p className="text-sm text-gray-500 mt-1">Based on {reviewsData.filter((r: any) => r.revieweeId === user?.id).length} reviews</p>
                     </div>
                     
                     <div className="flex flex-col space-y-2 w-full md:w-2/3 lg:w-1/2">
                       {[5, 4, 3, 2, 1].map(rating => {
-                        const count = mockReviews.filter(r => r.revieweeId === user?.id && Math.floor(r.rating) === rating).length;
-                        const percentage = mockReviews.filter(r => r.revieweeId === user?.id).length > 0 
-                          ? (count / mockReviews.filter(r => r.revieweeId === user?.id).length) * 100 
+                        const count = reviewsData.filter((r: any) => r.revieweeId === user?.id && Math.floor(r.rating) === rating).length;
+                        const percentage = reviewsData.filter((r: any) => r.revieweeId === user?.id).length > 0 
+                          ? (count / reviewsData.filter((r: any) => r.revieweeId === user?.id).length) * 100 
                           : 0;
                         
                         return (
