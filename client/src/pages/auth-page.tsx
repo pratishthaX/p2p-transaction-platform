@@ -303,15 +303,15 @@ export default function AuthPage() {
       </div>
 
       {/* Right side - Hero */}
-      <div className="hidden md:flex md:w-1/2 bg-primary-600 text-white p-12 flex-col justify-center">
+      <div className="hidden md:flex md:w-1/2 bg-primary p-12 flex-col justify-center">
         <div className="max-w-md mx-auto">
           <div className="mb-8 flex justify-center">
             <Shield size={80} />
           </div>
-          <h2 className="text-3xl font-bold mb-6">
+          <h2 className="text-3xl font-bold mb-6 text-primary-foreground">
             Secure Transactions with Escrow Protection
           </h2>
-          <p className="text-lg mb-8">
+          <p className="text-lg mb-8 text-primary-foreground">
             EscrowHub provides a secure platform for peer-to-peer transactions.
             Our escrow system holds funds until both parties are satisfied,
             ensuring safe and reliable exchanges for buyers and sellers.
@@ -322,8 +322,8 @@ export default function AuthPage() {
                 <Shield size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-xl mb-1">Secure Escrow</h3>
-                <p>
+                <h3 className="font-semibold text-xl mb-1 text-primary-foreground">Secure Escrow</h3>
+                <p className="text-primary-foreground">
                   Funds are locked until transaction conditions are met,
                   protecting both buyers and sellers.
                 </p>
@@ -347,10 +347,10 @@ export default function AuthPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-xl mb-1">
+                <h3 className="font-semibold text-xl mb-1 text-primary-foreground">
                   Transparent Process
                 </h3>
-                <p>
+                <p className="text-primary-foreground">
                   Clear transaction status updates and communication tools for
                   seamless coordination.
                 </p>
@@ -378,10 +378,10 @@ export default function AuthPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-xl mb-1">
+                <h3 className="font-semibold text-xl mb-1 text-primary-foreground">
                   Dispute Resolution
                 </h3>
-                <p>
+                <p className="text-primary-foreground">
                   Fair and impartial moderation to resolve any issues that may
                   arise during transactions.
                 </p>
