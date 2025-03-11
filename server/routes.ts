@@ -1,9 +1,26 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { insertTransactionSchema, insertDisputeSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
+import Stripe from "stripe";
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
+
+// This is your Stripe CLI webhook secret for testing your endpoint locally.
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+// Use JSON parser for all non-webhook routes
+const jsonParser = express.json();
+const webhookParser = express.raw({ type: 'application/json' });
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
@@ -60,21 +77,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/balance/add", isAuthenticated, async (req, res) => {
+  // Transaction history endpoint for balance page
+  app.get("/api/balance/history", isAuthenticated, async (req, res) => {
+    try {
+      const transactions = await storage.getUserTransactions(req.user.id);
+      
+      // Transform transactions into the format needed for the balance page
+      const transactionHistory = transactions.map(transaction => {
+        const isCredit = 
+          (transaction.buyerId === req.user.id && transaction.status === 'cancelled') ||
+          (transaction.sellerId === req.user.id && transaction.status === 'completed');
+        
+        const isDebit = 
+          (transaction.buyerId === req.user.id && 
+           (transaction.status === 'pending' || 
+            transaction.status === 'in_progress' || 
+            transaction.status === 'awaiting_delivery' || 
+            transaction.status === 'ready_for_release' || 
+            transaction.status === 'completed'));
+        
+        const type = isCredit ? 'credit' : (isDebit ? 'debit' : 'pending');
+        
+        let description = transaction.title;
+        if (transaction.buyerId === req.user.id) {
+          description = `Payment for: ${transaction.title}`;
+        } else if (transaction.sellerId === req.user.id) {
+          description = `Received payment for: ${transaction.title}`;
+        }
+        
+        if (transaction.status === 'cancelled') {
+          description = `Refund for cancelled transaction: ${transaction.title}`;
+        }
+        
+        return {
+          id: transaction.id,
+          type,
+          description,
+          amount: transaction.amount,
+          date: transaction.createdAt,
+        };
+      });
+      
+      res.json(transactionHistory);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching transaction history" });
+    }
+  });
+  
+  // Create Stripe payment intent
+  app.post("/api/balance/create-payment-intent", isAuthenticated, async (req, res) => {
     try {
       const { amount } = req.body;
       if (!amount || isNaN(amount) || amount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
       }
-      
-      const user = await storage.getUser(req.user.id);
-      const newBalance = user.balance + parseFloat(amount);
-      const updatedUser = await storage.updateUserBalance(req.user.id, newBalance);
-      
-      res.json({ balance: updatedUser.balance });
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Stripe expects amounts in cents
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          userId: req.user?.id.toString(),
+          type: 'balance_add'
+        }
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+      });
     } catch (error) {
-      res.status(500).json({ message: "Error adding funds" });
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Error creating payment intent" 
+      });
     }
+  });
+
+  // Stripe webhook to handle successful payments
+  app.post("/api/stripe-webhook", async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      // Verify webhook signature
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig || '',
+        process.env.STRIPE_WEBHOOK_SECRET || ''
+      );
+    } catch (err) {
+      res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Invalid signature'}`);
+      return;
+    }
+
+    // Handle the event
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      const userId = parseInt(paymentIntent.metadata.userId);
+      const amount = paymentIntent.amount / 100; // Convert back from cents
+
+      if (paymentIntent.metadata.type === 'balance_add') {
+        try {
+          const user = await storage.getUser(userId);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          const newBalance = user.balance + amount;
+          await storage.updateUserBalance(userId, newBalance);
+        } catch (error) {
+          console.error('Error processing successful payment:', error);
+          res.status(500).json({ message: "Error processing payment" });
+          return;
+        }
+      }
+    }
+
+    res.json({ received: true });
   });
 
   // Transaction routes

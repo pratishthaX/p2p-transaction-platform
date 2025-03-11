@@ -38,6 +38,12 @@ export default function Balance() {
     queryKey: ["/api/balance"],
     // queryFn set in queryClient.ts
   });
+  
+  // Fetch transaction history
+  const { data: transactionHistory, isLoading: historyLoading } = useQuery({
+    queryKey: ["/api/balance/history"],
+    // queryFn set in queryClient.ts
+  });
 
   // Form validation schema
   const formSchema = z.object({
@@ -188,19 +194,35 @@ export default function Balance() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {mockTransactionHistory.map((transaction) => (
-                          <tr key={transaction.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(transaction.date)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {transaction.description}
-                            </td>
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                              {transaction.type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                        {historyLoading ? (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-4 text-center">
+                              <div className="flex justify-center">
+                                <Skeleton className="h-4 w-48" />
+                              </div>
                             </td>
                           </tr>
-                        ))}
+                        ) : !transactionHistory || transactionHistory.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                              No transaction history
+                            </td>
+                          </tr>
+                        ) : (
+                          transactionHistory.map((transaction: any) => (
+                            <tr key={transaction.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(transaction.date)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {transaction.description}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.type === 'credit' ? 'text-green-600' : (transaction.type === 'debit' ? 'text-red-600' : 'text-gray-600')}`}>
+                                {transaction.type === 'credit' ? '+' : (transaction.type === 'debit' ? '-' : '')}${transaction.amount.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
